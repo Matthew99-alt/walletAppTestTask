@@ -1,0 +1,21 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-wallet
+      author: postgres
+      changes:
+        - createTable:
+            tableName: wallets
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: balance
+                  type: numeric(19,2)
+                  constraints:
+                    nullable: false
