@@ -12,8 +12,8 @@ public class WalletMapper {
     public WalletDTO walletToDTO(Wallet wallet){
         WalletDTO walletDTO = new WalletDTO();
 
-        walletDTO.setId(wallet.getId());
-        walletDTO.setBalance(wallet.getBalance());
+        walletDTO.setValletId(wallet.getValletId());
+        walletDTO.setAmount(wallet.getAmount());
 
         return walletDTO;
     }
@@ -21,8 +21,8 @@ public class WalletMapper {
     public Wallet dtoToWallet(WalletDTO walletDTO){
         Wallet wallet = new Wallet();
 
-        wallet.setId(walletDTO.getId());
-        wallet.setBalance(walletDTO.getBalance());
+        wallet.setValletId(walletDTO.getValletId());
+        wallet.setAmount(walletDTO.getAmount());
 
         return wallet;
     }

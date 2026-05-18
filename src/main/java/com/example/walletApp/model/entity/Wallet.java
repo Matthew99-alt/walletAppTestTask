@@ -14,9 +14,10 @@ import java.util.UUID;
 public class Wallet {
 
     @Id
-    private UUID id;
+    @Column(name = "vallet_id", nullable = false)
+    private UUID valletId;
 
-    @Column(name = "balance", nullable = false)
-    private BigDecimal balance;
+    @Column(name = "amount", nullable = false)
+    private BigDecimal amount;
 
 }

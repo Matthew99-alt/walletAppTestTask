@@ -3,13 +3,15 @@ package com.example.walletApp.controller;
 import com.example.walletApp.exception.InsufficientFundsException;
 import com.example.walletApp.model.dto.ErrorDTO;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,8 +20,8 @@ import java.util.Map;
  * ControllerAdvice для корректного вывода сообщений об ошибках
  */
 
+@Slf4j
 @RestControllerAdvice
-@RequiredArgsConstructor
 public class GlobalControllerAdvice {
 
     @ExceptionHandler(EntityNotFoundException.class)
@@ -35,12 +37,21 @@ public class GlobalControllerAdvice {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ErrorDTO handleValidationExceptions(MethodArgumentNotValidException ex) {
+
         Map<String, String> errors = new HashMap<>();
+
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage())
         );
-        return errors;
+
+        ErrorDTO errorDTO = new ErrorDTO();
+        errorDTO.setMessage("Validation failed");
+        errorDTO.setNumber(HttpStatus.BAD_REQUEST.value());
+        errorDTO.setDescription(HttpStatus.BAD_REQUEST.getReasonPhrase());
+        errorDTO.setErrors(errors);
+
+        return errorDTO;
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -49,6 +60,18 @@ public class GlobalControllerAdvice {
 
         ErrorDTO errorDTO = new ErrorDTO();
         errorDTO.setMessage("Invalid JSON format");
+        errorDTO.setNumber(HttpStatus.BAD_REQUEST.value());
+        errorDTO.setDescription(HttpStatus.BAD_REQUEST.getReasonPhrase());
+
+        return errorDTO;
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorDTO handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+
+        ErrorDTO errorDTO = new ErrorDTO();
+        errorDTO.setMessage("Invalid parameter: " + ex.getName());
         errorDTO.setNumber(HttpStatus.BAD_REQUEST.value());
         errorDTO.setDescription(HttpStatus.BAD_REQUEST.getReasonPhrase());
 
@@ -66,11 +89,28 @@ public class GlobalControllerAdvice {
         return errorDTO;
     }
 
+    @ExceptionHandler(DataAccessException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorDTO handleDatabaseProblems(Exception ex) {
+
+        log.error("Database problem", ex);
+
+        ErrorDTO errorDTO = new ErrorDTO();
+        errorDTO.setMessage("Database temporarily unavailable");
+        errorDTO.setNumber(HttpStatus.SERVICE_UNAVAILABLE.value());
+        errorDTO.setDescription(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase());
+
+        return errorDTO;
+    }
+
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorDTO handleRuntimeException(RuntimeException ex) {
+
+        log.error("Unexpected error occurred", ex);
+
         ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage(ex.getMessage());
+        errorDTO.setMessage("Unexpected internal error");
         errorDTO.setNumber(HttpStatus.INTERNAL_SERVER_ERROR.value());
         errorDTO.setDescription(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
 

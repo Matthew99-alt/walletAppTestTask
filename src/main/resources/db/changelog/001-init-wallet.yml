@@ -8,14 +8,14 @@ databaseChangeLog:
             tableName: wallets
             columns:
               - column:
-                  name: id
+                  name: vallet_id
                   type: uuid
                   constraints:
                     primaryKey: true
                     nullable: false
 
               - column:
-                  name: balance
+                  name: amount
                   type: numeric(19,2)
                   constraints:
                     nullable: false

@@ -12,9 +12,9 @@ import java.util.UUID;
 @Setter
 public class WalletDTO {
     @NotNull
-    private UUID id;
+    private UUID valletId;
 
     @NotNull
     @PositiveOrZero
-    private BigDecimal balance;
+    private BigDecimal amount;
 }

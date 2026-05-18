@@ -13,11 +13,11 @@ import java.util.UUID;
 @Setter
 public class WalletRequestDTO {
     @NotNull
-    private UUID id;
+    private UUID valletId;
 
     @NotNull
     @Positive
-    private BigDecimal balance;
+    private BigDecimal amount;
 
     @NotNull
     private OperationType operationType;

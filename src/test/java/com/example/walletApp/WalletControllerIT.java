@@ -21,8 +21,7 @@ import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @Testcontainers
@@ -48,8 +47,11 @@ class WalletControllerIT {
 
         UUID fakeId = UUID.randomUUID();
 
-        mockMvc.perform(get("/api/v1/wallet/" + fakeId))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/wallets/{id}", fakeId))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("Wallet not found"))
+                .andExpect(jsonPath("$.number").value(404));
     }
 
     @Test
@@ -59,8 +61,8 @@ class WalletControllerIT {
         UUID walletId = UUID.randomUUID();
 
         WalletRequestDTO request = new WalletRequestDTO();
-        request.setId(walletId);
-        request.setBalance(BigDecimal.valueOf(1000));
+        request.setValletId(walletId);
+        request.setAmount(BigDecimal.valueOf(1000));
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -81,8 +83,8 @@ class WalletControllerIT {
         createWallet(walletId);
 
         WalletRequestDTO request = new WalletRequestDTO();
-        request.setId(walletId);
-        request.setBalance(BigDecimal.valueOf(1000));
+        request.setValletId(walletId);
+        request.setAmount(BigDecimal.valueOf(1000));
         request.setOperationType(OperationType.DEPOSIT);
 
         String json = objectMapper.writeValueAsString(request);
@@ -104,9 +106,9 @@ class WalletControllerIT {
         createWallet(walletId);
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setId(walletId);
+        requestDTO.setValletId(walletId);
         requestDTO.setOperationType(OperationType.WITHDRAW);
-        requestDTO.setBalance(BigDecimal.valueOf(1000));
+        requestDTO.setAmount(BigDecimal.valueOf(1000));
 
         mockMvc.perform(post("/api/v1/wallet")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -139,9 +141,9 @@ class WalletControllerIT {
         createWallet(walletId, BigDecimal.valueOf(2000));
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setId(walletId);
+        requestDTO.setValletId(walletId);
         requestDTO.setOperationType(OperationType.WITHDRAW);
-        requestDTO.setBalance(BigDecimal.valueOf(500));
+        requestDTO.setAmount(BigDecimal.valueOf(500));
 
         mockMvc.perform(post("/api/v1/wallet")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -155,8 +157,8 @@ class WalletControllerIT {
         UUID walletId = UUID.randomUUID();
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setId(walletId);
-        requestDTO.setBalance(BigDecimal.valueOf(100));
+        requestDTO.setValletId(walletId);
+        requestDTO.setAmount(BigDecimal.valueOf(100));
 
         mockMvc.perform(post("/api/v1/wallet")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -168,9 +170,9 @@ class WalletControllerIT {
     void shouldReturn404WhenWalletForOperationNotFound() throws Exception {
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setId(UUID.randomUUID());
+        requestDTO.setValletId(UUID.randomUUID());
         requestDTO.setOperationType(OperationType.DEPOSIT);
-        requestDTO.setBalance(BigDecimal.valueOf(100));
+        requestDTO.setAmount(BigDecimal.valueOf(100));
 
         mockMvc.perform(post("/api/v1/wallet")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -184,9 +186,9 @@ class WalletControllerIT {
         UUID walletId = UUID.randomUUID();
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setId(walletId);
+        requestDTO.setValletId(walletId);
         requestDTO.setOperationType(OperationType.DEPOSIT);
-        requestDTO.setBalance(BigDecimal.valueOf(-100));
+        requestDTO.setAmount(BigDecimal.valueOf(-100));
 
         mockMvc.perform(post("/api/v1/wallet")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -197,8 +199,8 @@ class WalletControllerIT {
     private void createWallet(UUID walletId) throws Exception {
 
         WalletRequestDTO request = new WalletRequestDTO();
-        request.setId(walletId);
-        request.setBalance(BigDecimal.valueOf(0));
+        request.setValletId(walletId);
+        request.setAmount(BigDecimal.valueOf(0));
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -211,8 +213,8 @@ class WalletControllerIT {
     private void createWallet(UUID walletId, BigDecimal balance) throws Exception {
 
         WalletDTO request = new WalletDTO();
-        request.setId(walletId);
-        request.setBalance(balance);
+        request.setValletId(walletId);
+        request.setAmount(balance);
 
         mockMvc.perform(
                 post("/api/v1/saveWallet")

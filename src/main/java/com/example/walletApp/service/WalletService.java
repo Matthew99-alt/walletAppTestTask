@@ -21,19 +21,19 @@ public class WalletService {
 
     @Transactional
     public WalletDTO changeBalance(WalletRequestDTO walletRequestDTO) throws InsufficientFundsException, EntityNotFoundException {
-        Wallet walletToChange = walletRepository.findById(walletRequestDTO.getId())
+        Wallet walletToChange = walletRepository.findByIdForUpdate(walletRequestDTO.getValletId())
                 .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
 
         switch(walletRequestDTO.getOperationType()){
             case DEPOSIT -> {
-                walletToChange.setBalance(walletToChange.getBalance().add(walletRequestDTO.getBalance()));
+                walletToChange.setAmount(walletToChange.getAmount().add(walletRequestDTO.getAmount()));
                 walletRepository.save(walletToChange);
             }
             case WITHDRAW -> {
-                if (walletToChange.getBalance().compareTo(walletRequestDTO.getBalance())<0){
+                if (walletToChange.getAmount().compareTo(walletRequestDTO.getAmount())<0){
                     throw  new InsufficientFundsException("Negative balance");
                 }
-                walletToChange.setBalance(walletToChange.getBalance().subtract(walletRequestDTO.getBalance()));
+                walletToChange.setAmount(walletToChange.getAmount().subtract(walletRequestDTO.getAmount()));
                 walletRepository.save(walletToChange);
             }
         }
@@ -41,15 +41,23 @@ public class WalletService {
         return walletMapper.walletToDTO(walletToChange);
     }
 
+    @Transactional(readOnly = true)
     public WalletDTO getAWallet(UUID uuid){
-        Wallet requiredWallet = walletRepository.getReferenceById(uuid);
+        Wallet requiredWallet = walletRepository.findById(uuid)
+                .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
 
         return walletMapper.walletToDTO(requiredWallet);
     }
 
+    @Transactional
     public WalletDTO saveAWallet(WalletDTO walletDTO){
         walletRepository.save(walletMapper.dtoToWallet(walletDTO));
 
         return walletDTO;
+    }
+
+    @Transactional
+    public void loadTestHold(UUID id) {
+        walletRepository.sleep();
     }
 }
