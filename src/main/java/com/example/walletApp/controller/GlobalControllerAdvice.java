@@ -4,7 +4,7 @@ import com.example.walletApp.exception.InsufficientFundsException;
 import com.example.walletApp.model.dto.ErrorDTO;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -89,17 +89,13 @@ public class GlobalControllerAdvice {
         return errorDTO;
     }
 
-    @ExceptionHandler(DataAccessException.class)
-    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public ErrorDTO handleDatabaseProblems(Exception ex) {
-
-        log.error("Database problem", ex);
-
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorDTO handleLockTimeoutException(PessimisticLockingFailureException ex) {
         ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage("Database temporarily unavailable");
-        errorDTO.setNumber(HttpStatus.SERVICE_UNAVAILABLE.value());
-        errorDTO.setDescription(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase());
-
+        errorDTO.setMessage("Wallet is currently being updated, please retry");
+        errorDTO.setNumber(HttpStatus.CONFLICT.value());
+        errorDTO.setDescription(HttpStatus.CONFLICT.getReasonPhrase());
         return errorDTO;
     }
 
