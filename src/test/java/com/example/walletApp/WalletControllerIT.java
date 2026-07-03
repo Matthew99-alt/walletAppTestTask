@@ -4,7 +4,6 @@ import com.example.walletApp.model.dto.WalletDTO;
 import com.example.walletApp.model.dto.WalletRequestDTO;
 import com.example.walletApp.enums.OperationType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -55,24 +54,46 @@ class WalletControllerIT {
     }
 
     @Test
-    @Transactional
     void shouldCreateWallet() throws Exception {
 
         UUID walletId = UUID.randomUUID();
 
-        WalletRequestDTO request = new WalletRequestDTO();
-        request.setValletId(walletId);
+        WalletDTO request = new WalletDTO();
+        request.setWalletId(walletId);
         request.setAmount(BigDecimal.valueOf(1000));
 
         String json = objectMapper.writeValueAsString(request);
 
         mockMvc.perform(
-                        post("/api/v1/saveWallet").contentType(MediaType.APPLICATION_JSON)
+                        post("/api/v1/wallets").contentType(MediaType.APPLICATION_JSON)
                                 .content(json)
                 )
+                .andExpect(status().isCreated())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.walletId").value(walletId.toString()))
+                .andExpect(jsonPath("$.amount").value(1000));
+    }
+
+    @Test
+    void shouldReturn409WhenWalletAlreadyExists() throws Exception {
+
+        UUID walletId = UUID.randomUUID();
+
+        createWallet(walletId, BigDecimal.valueOf(500));
+
+        WalletDTO request = new WalletDTO();
+        request.setWalletId(walletId);
+        request.setAmount(BigDecimal.ZERO);
+
+        mockMvc.perform(post("/api/v1/wallets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Wallet already exists"));
+
+        mockMvc.perform(get("/api/v1/wallets/{id}", walletId))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-                );
+                .andExpect(jsonPath("$.amount").value(500));
     }
 
     @Test
@@ -80,10 +101,10 @@ class WalletControllerIT {
 
         UUID walletId = UUID.randomUUID();
 
-        createWallet(walletId);
+        createWallet(walletId, BigDecimal.ZERO);
 
         WalletRequestDTO request = new WalletRequestDTO();
-        request.setValletId(walletId);
+        request.setWalletId(walletId);
         request.setAmount(BigDecimal.valueOf(1000));
         request.setOperationType(OperationType.DEPOSIT);
 
@@ -94,8 +115,9 @@ class WalletControllerIT {
                                 .content(json)
                 )
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-                );
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.walletId").value(walletId.toString()))
+                .andExpect(jsonPath("$.amount").value(1000));
     }
 
     @Test
@@ -103,10 +125,10 @@ class WalletControllerIT {
 
         UUID walletId = UUID.randomUUID();
 
-        createWallet(walletId);
+        createWallet(walletId, BigDecimal.ZERO);
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setValletId(walletId);
+        requestDTO.setWalletId(walletId);
         requestDTO.setOperationType(OperationType.WITHDRAW);
         requestDTO.setAmount(BigDecimal.valueOf(1000));
 
@@ -141,14 +163,15 @@ class WalletControllerIT {
         createWallet(walletId, BigDecimal.valueOf(2000));
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setValletId(walletId);
+        requestDTO.setWalletId(walletId);
         requestDTO.setOperationType(OperationType.WITHDRAW);
         requestDTO.setAmount(BigDecimal.valueOf(500));
 
         mockMvc.perform(post("/api/v1/wallet")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDTO)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value(1500));
     }
 
     @Test
@@ -157,7 +180,7 @@ class WalletControllerIT {
         UUID walletId = UUID.randomUUID();
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setValletId(walletId);
+        requestDTO.setWalletId(walletId);
         requestDTO.setAmount(BigDecimal.valueOf(100));
 
         mockMvc.perform(post("/api/v1/wallet")
@@ -170,7 +193,7 @@ class WalletControllerIT {
     void shouldReturn404WhenWalletForOperationNotFound() throws Exception {
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setValletId(UUID.randomUUID());
+        requestDTO.setWalletId(UUID.randomUUID());
         requestDTO.setOperationType(OperationType.DEPOSIT);
         requestDTO.setAmount(BigDecimal.valueOf(100));
 
@@ -181,12 +204,12 @@ class WalletControllerIT {
     }
 
     @Test
-    void shouldReturn400WhenBalanceNegative() throws Exception {
+    void shouldReturn400WhenAmountNegative() throws Exception {
 
         UUID walletId = UUID.randomUUID();
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
-        requestDTO.setValletId(walletId);
+        requestDTO.setWalletId(walletId);
         requestDTO.setOperationType(OperationType.DEPOSIT);
         requestDTO.setAmount(BigDecimal.valueOf(-100));
 
@@ -196,30 +219,17 @@ class WalletControllerIT {
                 .andExpect(status().isBadRequest());
     }
 
-    private void createWallet(UUID walletId) throws Exception {
-
-        WalletRequestDTO request = new WalletRequestDTO();
-        request.setValletId(walletId);
-        request.setAmount(BigDecimal.valueOf(0));
-
-        String json = objectMapper.writeValueAsString(request);
-
-        mockMvc.perform(
-                post("/api/v1/saveWallet").contentType(MediaType.APPLICATION_JSON)
-                        .content(json)
-        );
-    }
-
     private void createWallet(UUID walletId, BigDecimal balance) throws Exception {
 
         WalletDTO request = new WalletDTO();
-        request.setValletId(walletId);
+        request.setWalletId(walletId);
         request.setAmount(balance);
 
         mockMvc.perform(
-                post("/api/v1/saveWallet")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-        );
+                        post("/api/v1/wallets")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isCreated());
     }
 }

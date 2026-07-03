@@ -1,6 +1,7 @@
 package com.example.walletApp.controller;
 
 import com.example.walletApp.exception.InsufficientFundsException;
+import com.example.walletApp.exception.WalletAlreadyExistsException;
 import com.example.walletApp.model.dto.ErrorDTO;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,17 @@ public class GlobalControllerAdvice {
     @ExceptionHandler(InsufficientFundsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorDTO handleInsufficientFundsException(InsufficientFundsException ex){
+        ErrorDTO errorDTO = new ErrorDTO();
+        errorDTO.setMessage(ex.getMessage());
+        errorDTO.setNumber(HttpStatus.CONFLICT.value());
+        errorDTO.setDescription(HttpStatus.CONFLICT.getReasonPhrase());
+
+        return errorDTO;
+    }
+
+    @ExceptionHandler(WalletAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorDTO handleWalletAlreadyExistsException(WalletAlreadyExistsException ex) {
         ErrorDTO errorDTO = new ErrorDTO();
         errorDTO.setMessage(ex.getMessage());
         errorDTO.setNumber(HttpStatus.CONFLICT.value());

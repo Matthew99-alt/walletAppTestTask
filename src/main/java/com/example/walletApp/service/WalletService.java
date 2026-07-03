@@ -1,6 +1,7 @@
 package com.example.walletApp.service;
 
 import com.example.walletApp.exception.InsufficientFundsException;
+import com.example.walletApp.exception.WalletAlreadyExistsException;
 import com.example.walletApp.mapper.WalletMapper;
 import com.example.walletApp.model.dto.WalletRequestDTO;
 import com.example.walletApp.model.dto.WalletDTO;
@@ -20,21 +21,17 @@ public class WalletService {
     private final WalletMapper walletMapper;
 
     @Transactional
-    public WalletDTO changeBalance(WalletRequestDTO walletRequestDTO) throws InsufficientFundsException, EntityNotFoundException {
-        Wallet walletToChange = walletRepository.findByIdForUpdate(walletRequestDTO.getValletId())
+    public WalletDTO changeBalance(WalletRequestDTO walletRequestDTO) {
+        Wallet walletToChange = walletRepository.findByIdForUpdate(walletRequestDTO.getWalletId())
                 .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
 
         switch(walletRequestDTO.getOperationType()){
-            case DEPOSIT -> {
-                walletToChange.setAmount(walletToChange.getAmount().add(walletRequestDTO.getAmount()));
-                walletRepository.save(walletToChange);
-            }
+            case DEPOSIT -> walletToChange.setAmount(walletToChange.getAmount().add(walletRequestDTO.getAmount()));
             case WITHDRAW -> {
                 if (walletToChange.getAmount().compareTo(walletRequestDTO.getAmount())<0){
-                    throw  new InsufficientFundsException("Negative balance");
+                    throw new InsufficientFundsException("Negative balance");
                 }
                 walletToChange.setAmount(walletToChange.getAmount().subtract(walletRequestDTO.getAmount()));
-                walletRepository.save(walletToChange);
             }
         }
 
@@ -51,13 +48,12 @@ public class WalletService {
 
     @Transactional
     public WalletDTO saveAWallet(WalletDTO walletDTO){
+        if (walletRepository.existsById(walletDTO.getWalletId())) {
+            throw new WalletAlreadyExistsException("Wallet already exists");
+        }
+
         walletRepository.save(walletMapper.dtoToWallet(walletDTO));
 
         return walletDTO;
-    }
-
-    @Transactional
-    public void loadTestHold(UUID id) {
-        walletRepository.sleep();
     }
 }

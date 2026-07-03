@@ -13,7 +13,7 @@ import java.util.UUID;
 @Setter
 public class WalletRequestDTO {
     @NotNull
-    private UUID valletId;
+    private UUID walletId;
 
     @NotNull
     @Positive
