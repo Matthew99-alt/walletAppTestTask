@@ -15,6 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -103,9 +104,15 @@ public class GlobalControllerAdvice {
         return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ex.getMessage());
     }
 
-    @ExceptionHandler(DataAccessResourceFailureException.class)
+    /**
+     * Недоступность БД проявляется двумя путями: не удалось открыть
+     * транзакцию (CannotCreateTransactionException — типичный случай,
+     * соединение берётся на старте транзакции) либо соединение отвалилось
+     * уже внутри неё (DataAccessResourceFailureException). Оба — 503.
+     */
+    @ExceptionHandler({CannotCreateTransactionException.class, DataAccessResourceFailureException.class})
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public ErrorDTO handleDataAccessResourceFailure(DataAccessResourceFailureException ex) {
+    public ErrorDTO handleDatabaseUnavailable(Exception ex) {
 
         log.error("Database is unavailable or connection pool exhausted", ex);
 
