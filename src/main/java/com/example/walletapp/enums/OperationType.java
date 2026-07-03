@@ -1,4 +1,4 @@
-package com.example.walletApp.enums;
+package com.example.walletapp.enums;
 
 public enum OperationType {
 

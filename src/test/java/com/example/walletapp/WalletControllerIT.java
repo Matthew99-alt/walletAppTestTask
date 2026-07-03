@@ -1,8 +1,8 @@
-package com.example.walletApp;
+package com.example.walletapp;
 
-import com.example.walletApp.model.dto.WalletDTO;
-import com.example.walletApp.model.dto.WalletRequestDTO;
-import com.example.walletApp.enums.OperationType;
+import com.example.walletapp.model.dto.WalletDTO;
+import com.example.walletapp.model.dto.WalletRequestDTO;
+import com.example.walletapp.enums.OperationType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +50,7 @@ class WalletControllerIT {
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value("Wallet not found"))
-                .andExpect(jsonPath("$.number").value(404));
+                .andExpect(jsonPath("$.status").value(404));
     }
 
     @Test

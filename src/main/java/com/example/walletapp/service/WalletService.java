@@ -1,12 +1,12 @@
-package com.example.walletApp.service;
+package com.example.walletapp.service;
 
-import com.example.walletApp.exception.InsufficientFundsException;
-import com.example.walletApp.exception.WalletAlreadyExistsException;
-import com.example.walletApp.mapper.WalletMapper;
-import com.example.walletApp.model.dto.WalletRequestDTO;
-import com.example.walletApp.model.dto.WalletDTO;
-import com.example.walletApp.model.entity.Wallet;
-import com.example.walletApp.repository.WalletRepository;
+import com.example.walletapp.exception.InsufficientFundsException;
+import com.example.walletapp.exception.WalletAlreadyExistsException;
+import com.example.walletapp.mapper.WalletMapper;
+import com.example.walletapp.model.dto.WalletRequestDTO;
+import com.example.walletapp.model.dto.WalletDTO;
+import com.example.walletapp.model.entity.Wallet;
+import com.example.walletapp.repository.WalletRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,7 +39,7 @@ public class WalletService {
     }
 
     @Transactional(readOnly = true)
-    public WalletDTO getAWallet(UUID uuid){
+    public WalletDTO getWallet(UUID uuid){
         Wallet requiredWallet = walletRepository.findById(uuid)
                 .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
 
@@ -47,7 +47,7 @@ public class WalletService {
     }
 
     @Transactional
-    public WalletDTO saveAWallet(WalletDTO walletDTO){
+    public WalletDTO createWallet(WalletDTO walletDTO){
         if (walletRepository.existsById(walletDTO.getWalletId())) {
             throw new WalletAlreadyExistsException("Wallet already exists");
         }

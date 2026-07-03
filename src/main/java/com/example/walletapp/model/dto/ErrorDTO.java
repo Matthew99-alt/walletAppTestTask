@@ -1,4 +1,4 @@
-package com.example.walletApp.model.dto;
+package com.example.walletapp.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import java.util.Map;
 public class ErrorDTO {
 
     private String message;
-    private int number;
+    private int status;
     private String description;
     private Map<String, String> errors;
 }

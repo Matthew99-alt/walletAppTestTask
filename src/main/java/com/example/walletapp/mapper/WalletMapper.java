@@ -1,7 +1,7 @@
-package com.example.walletApp.mapper;
+package com.example.walletapp.mapper;
 
-import com.example.walletApp.model.dto.WalletDTO;
-import com.example.walletApp.model.entity.Wallet;
+import com.example.walletapp.model.dto.WalletDTO;
+import com.example.walletapp.model.entity.Wallet;
 import org.springframework.stereotype.Component;
 
 @Component

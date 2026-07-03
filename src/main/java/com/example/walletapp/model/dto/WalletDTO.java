@@ -1,4 +1,4 @@
-package com.example.walletApp.model.dto;
+package com.example.walletapp.model.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;

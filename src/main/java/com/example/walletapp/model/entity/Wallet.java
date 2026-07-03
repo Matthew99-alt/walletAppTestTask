@@ -1,4 +1,4 @@
-package com.example.walletApp.model.entity;
+package com.example.walletapp.model.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

@@ -1,6 +1,6 @@
-package com.example.walletApp.model.dto;
+package com.example.walletapp.model.dto;
 
-import com.example.walletApp.enums.OperationType;
+import com.example.walletapp.enums.OperationType;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;

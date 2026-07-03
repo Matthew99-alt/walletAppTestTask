@@ -1,8 +1,8 @@
-package com.example.walletApp.controller;
+package com.example.walletapp.controller;
 
-import com.example.walletApp.exception.InsufficientFundsException;
-import com.example.walletApp.exception.WalletAlreadyExistsException;
-import com.example.walletApp.model.dto.ErrorDTO;
+import com.example.walletapp.exception.InsufficientFundsException;
+import com.example.walletapp.exception.WalletAlreadyExistsException;
+import com.example.walletapp.model.dto.ErrorDTO;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -28,12 +28,7 @@ public class GlobalControllerAdvice {
     @ExceptionHandler(EntityNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorDTO handleEntityNotFoundException(EntityNotFoundException ex) {
-        ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage(ex.getMessage());
-        errorDTO.setNumber(HttpStatus.NOT_FOUND.value());
-        errorDTO.setDescription(HttpStatus.NOT_FOUND.getReasonPhrase());
-
-        return errorDTO;
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -46,10 +41,7 @@ public class GlobalControllerAdvice {
                 errors.put(error.getField(), error.getDefaultMessage())
         );
 
-        ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage("Validation failed");
-        errorDTO.setNumber(HttpStatus.BAD_REQUEST.value());
-        errorDTO.setDescription(HttpStatus.BAD_REQUEST.getReasonPhrase());
+        ErrorDTO errorDTO = buildError(HttpStatus.BAD_REQUEST, "Validation failed");
         errorDTO.setErrors(errors);
 
         return errorDTO;
@@ -58,69 +50,47 @@ public class GlobalControllerAdvice {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorDTO handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
-
-        ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage("Invalid JSON format");
-        errorDTO.setNumber(HttpStatus.BAD_REQUEST.value());
-        errorDTO.setDescription(HttpStatus.BAD_REQUEST.getReasonPhrase());
-
-        return errorDTO;
+        return buildError(HttpStatus.BAD_REQUEST, "Invalid JSON format");
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorDTO handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
-
-        ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage("Invalid parameter: " + ex.getName());
-        errorDTO.setNumber(HttpStatus.BAD_REQUEST.value());
-        errorDTO.setDescription(HttpStatus.BAD_REQUEST.getReasonPhrase());
-
-        return errorDTO;
+        return buildError(HttpStatus.BAD_REQUEST, "Invalid parameter: " + ex.getName());
     }
 
     @ExceptionHandler(InsufficientFundsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorDTO handleInsufficientFundsException(InsufficientFundsException ex){
-        ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage(ex.getMessage());
-        errorDTO.setNumber(HttpStatus.CONFLICT.value());
-        errorDTO.setDescription(HttpStatus.CONFLICT.getReasonPhrase());
-
-        return errorDTO;
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(WalletAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorDTO handleWalletAlreadyExistsException(WalletAlreadyExistsException ex) {
-        ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage(ex.getMessage());
-        errorDTO.setNumber(HttpStatus.CONFLICT.value());
-        errorDTO.setDescription(HttpStatus.CONFLICT.getReasonPhrase());
-
-        return errorDTO;
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(PessimisticLockingFailureException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorDTO handleLockTimeoutException(PessimisticLockingFailureException ex) {
-        ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage("Wallet is currently being updated, please retry");
-        errorDTO.setNumber(HttpStatus.CONFLICT.value());
-        errorDTO.setDescription(HttpStatus.CONFLICT.getReasonPhrase());
-        return errorDTO;
+        return buildError(HttpStatus.CONFLICT, "Wallet is currently being updated, please retry");
     }
 
-    @ExceptionHandler(RuntimeException.class)
+    @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorDTO handleRuntimeException(RuntimeException ex) {
+    public ErrorDTO handleUnexpectedException(Exception ex) {
 
         log.error("Unexpected error occurred", ex);
 
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected internal error");
+    }
+
+    private ErrorDTO buildError(HttpStatus status, String message) {
         ErrorDTO errorDTO = new ErrorDTO();
-        errorDTO.setMessage("Unexpected internal error");
-        errorDTO.setNumber(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        errorDTO.setDescription(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
+        errorDTO.setMessage(message);
+        errorDTO.setStatus(status.value());
+        errorDTO.setDescription(status.getReasonPhrase());
 
         return errorDTO;
     }

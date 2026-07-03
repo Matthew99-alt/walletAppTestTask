@@ -1,6 +1,6 @@
-package com.example.walletApp.repository;
+package com.example.walletapp.repository;
 
-import com.example.walletApp.model.entity.Wallet;
+import com.example.walletapp.model.entity.Wallet;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
