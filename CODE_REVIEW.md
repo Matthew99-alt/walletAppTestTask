@@ -37,7 +37,7 @@
 
 ## Важно (уровень middle)
 
-### 7. Обработчик `PessimisticLockingFailureException` не срабатывает (`GlobalControllerAdvice.java:92`)
+### 7. ✅ (исправлено 2026-07-03: lock_timeout через connection options, настраивается LOCK_TIMEOUT_MS) Обработчик `PessimisticLockingFailureException` не срабатывает (`GlobalControllerAdvice.java:92`)
 Коммит "503 is not working" — про это. Причина: `PESSIMISTIC_WRITE` в Postgres ждёт блокировку бесконечно, таймаута нет — исключение не бросается, запросы висят. Фикс:
 
 ```java
@@ -47,7 +47,7 @@
 
 либо `SELECT ... FOR UPDATE NOWAIT`.
 
-### 8. Альтернатива блокировке — атомарный UPDATE
+### 8. ✅ (2026-07-03: оставлена пессимистичная блокировка, альтернативы описаны в README, раздел «Конкурентность») Альтернатива блокировке — атомарный UPDATE
 Для высокого RPS на один кошелёк select-for-update + save — узкое место (два round-trip, очередь на блокировке). Вариант одним запросом:
 
 ```sql
@@ -57,21 +57,21 @@ WHERE wallet_id = :id AND amount + :delta >= 0
 
 `rowsUpdated == 0` → не хватает средств (либо кошелёк не найден — различать через `existsById`). Даже если оставить пессимистичную блокировку — раздел в README «как решена конкурентность и почему» превращает проект из «ещё один CRUD» в аргумент на собеседовании.
 
-### 9. Нет теста на конкурентность
+### 9. ✅ (исправлено 2026-07-03: WalletConcurrencyIT — 150 параллельных списаний по реальному HTTP) Нет теста на конкурентность
 Вся суть задачи. Тест: `ExecutorService`, N параллельных withdraw с общего кошелька, ассерты — баланс не ушёл в минус, сумма сходится, нет потерянных обновлений. Сильнейший пункт для портфолио.
 
-### 10. Слабые ассерты в тестах (`WalletControllerIT.java`)
+### 10. ✅ (исправлено 2026-07-03) Слабые ассерты в тестах (`WalletControllerIT.java`)
 - `shouldDepositMoney` проверяет только статус 200 — не проверяет, что баланс стал 1000.
 - Хелпер `createWallet` не проверяет статус ответа — при падении создания тест падает дальше с непонятной ошибкой.
 - `shouldCreateWallet` шлёт `WalletRequestDTO` в эндпоинт, ожидающий `WalletDTO` — работает случайно из-за совпадения имён полей.
 
-### 11. Dockerfile — одна стадия, без кеша слоёв
+### 11. ✅ (исправлено 2026-07-03: multi-stage, JRE-рантайм, .dockerignore) Dockerfile — одна стадия, без кеша слоёв
 - `COPY . .` до сборки → любое изменение кода пересобирает всё, включая скачивание зависимостей.
 - JDK-образ в рантайме (~400MB лишних).
 - Фикс: multi-stage — стадия сборки (сначала `COPY gradle* settings*` + прогрев зависимостей, потом исходники), рантайм на `eclipse-temurin:17-jre`.
 - Добавить `.dockerignore` (`.git`, `build`, `.idea`).
 
-### 12. Приложение не запускается без Docker
+### 12. ✅ (исправлено 2026-07-03: дефолты на localhost) Приложение не запускается без Docker
 `application.yaml` требует env-переменные без дефолтов. Добавить дефолты (`${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/wallet_db}`) или профиль `local`.
 
 ---
@@ -79,26 +79,26 @@ WHERE wallet_id = :id AND amount + :delta >= 0
 ## Полировка
 
 - [ ] `git log`: "I did it", "503 is not working" — переписать историю (interactive rebase / squash); для портфолио история коммитов — витрина.
-- [ ] `{WALLET_UUID}` в пути → `{walletId}` (`WalletController.java:21`).
-- [ ] Имена методов `getAWallet` / `saveAWallet` → `getWallet` / `createWallet`.
-- [ ] `throws InsufficientFundsException, EntityNotFoundException` в сигнатурах — оба unchecked, объявление лишнее.
-- [ ] Явный `walletRepository.save()` внутри `@Transactional` не нужен — dirty checking сохранит сам.
-- [ ] `ErrorDTO.number` → `status`; лучше — стандартный `ProblemDetail` (RFC 7807, встроен в Spring 6).
-- [ ] `show-sql: true` — убрать или вынести в dev-профиль.
-- [ ] Пакет `walletApp` → `walletapp` (Java-конвенция: пакеты lowercase).
-- [ ] `@RequestMapping("api/v1")` → `"/api/v1"`.
-- [ ] `@RequiredArgsConstructor` на маппере без полей — убрать. Ручной маппер ок, но MapStruct — плюс в стек.
-- [ ] Хендлер `RuntimeException` → `Exception`, иначе checked-исключения пролетают мимо advice.
-- [ ] `HELP.md` (мусор от Spring Initializr) — удалить.
+- [x] `{WALLET_UUID}` в пути → `{walletId}` (`WalletController.java:21`).
+- [x] Имена методов `getAWallet` / `saveAWallet` → `getWallet` / `createWallet`.
+- [x] `throws InsufficientFundsException, EntityNotFoundException` в сигнатурах — оба unchecked, объявление лишнее.
+- [x] Явный `walletRepository.save()` внутри `@Transactional` не нужен — dirty checking сохранит сам.
+- [x] `ErrorDTO.number` → `status`; лучше — стандартный `ProblemDetail` (RFC 7807, встроен в Spring 6).
+- [x] `show-sql: true` — убрать или вынести в dev-профиль.
+- [x] Пакет `walletApp` → `walletapp` (Java-конвенция: пакеты lowercase).
+- [x] `@RequestMapping("api/v1")` → `"/api/v1"`.
+- [x] `@RequiredArgsConstructor` на маппере без полей — убрать. Ручной маппер ок, но MapStruct — плюс в стек.
+- [x] Хендлер `RuntimeException` → `Exception`, иначе checked-исключения пролетают мимо advice.
+- [x] `HELP.md` (мусор от Spring Initializr) — удалить.
 
 ---
 
 ## Чего не хватает для middle-портфолио
 
-1. **CI** — GitHub Actions: build + тесты на PR. Полдня работы, сильный сигнал.
-2. **README-раздел про конкурентность** — сравнение пессимистичной блокировки / оптимистичной с retry / атомарного UPDATE, почему выбран вариант. Об этом спросят на собеседовании.
+1. ✅ **CI** — GitHub Actions: build + тесты на PR (`.github/workflows/ci.yml`).
+2. ✅ **README-раздел про конкурентность** — добавлен (раздел «Конкурентность» со сравнением подходов).
 3. **Результаты нагрузочного теста** в README (после починки k6): RPS, латентность, отсутствие потерянных обновлений.
-4. **Swagger-аннотации** (`@Operation`, `@ApiResponse`) — springdoc подключен, но документация голая.
+4. ✅ **Swagger-аннотации** (`@Operation`, `@ApiResponse`) — добавлены на все эндпоинты.
 
 ---
 
@@ -108,3 +108,14 @@ WHERE wallet_id = :id AND amount + :delta >= 0
 2. Таймаут блокировки (7) + тест на конкурентность (9).
 3. Ассерты в тестах (10), Dockerfile (11), локальный запуск (12).
 4. Полировка + CI + README про конкурентность.
+
+---
+
+## Статус на 2026-07-03 (после доработок)
+
+Сделано: критичные 1-6, важные 7-12, полировка (кроме переписывания истории git), CI, README про конкурентность, Swagger-аннотации.
+
+Осталось:
+- переписать историю коммитов до начала доработок ("I did it", "503 is not working") — решение за владельцем репозитория, операция деструктивная (force push);
+- прогнать k6 на собранном сервисе и добавить результаты (RPS, латентность) в README;
+- опционально: MapStruct, ProblemDetail (RFC 7807), выставить git user.name/email c GitHub-почтой.
