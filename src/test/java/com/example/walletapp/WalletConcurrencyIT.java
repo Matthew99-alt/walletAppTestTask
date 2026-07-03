@@ -5,19 +5,15 @@ import com.example.walletapp.model.dto.WalletDTO;
 import com.example.walletapp.model.dto.WalletRequestDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,18 +28,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * параллельные списания не должны терять обновления и уводить баланс в минус.
  * Тест ходит по реальному HTTP, чтобы запросы обрабатывались разными потоками сервера.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-class WalletConcurrencyIT {
+class WalletConcurrencyIT extends AbstractIntegrationTest {
 
     private static final BigDecimal INITIAL_BALANCE = BigDecimal.valueOf(1000);
     private static final BigDecimal WITHDRAWAL = BigDecimal.TEN;
     private static final int ATTEMPTS = 150;
     private static final int THREADS = 20;
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -64,6 +54,7 @@ class WalletConcurrencyIT {
         ExecutorService executor = Executors.newFixedThreadPool(THREADS);
         CountDownLatch startSignal = new CountDownLatch(1);
         AtomicInteger successCount = new AtomicInteger();
+        ConcurrentLinkedQueue<Integer> unexpectedStatuses = new ConcurrentLinkedQueue<>();
 
         try {
             List<Future<?>> futures = new ArrayList<>();
@@ -82,6 +73,9 @@ class WalletConcurrencyIT {
 
                     if (response.getStatusCode().is2xxSuccessful()) {
                         successCount.incrementAndGet();
+                    } else if (response.getStatusCode() != HttpStatus.CONFLICT) {
+                        // допустимы только 200 (успех) и 409 (нет средств / таймаут блокировки)
+                        unexpectedStatuses.add(response.getStatusCode().value());
                     }
 
                     return null;
@@ -96,6 +90,8 @@ class WalletConcurrencyIT {
         } finally {
             executor.shutdownNow();
         }
+
+        assertThat(unexpectedStatuses).isEmpty();
 
         ResponseEntity<WalletDTO> after =
                 restTemplate.getForEntity("/api/v1/wallets/" + walletId, WalletDTO.class);

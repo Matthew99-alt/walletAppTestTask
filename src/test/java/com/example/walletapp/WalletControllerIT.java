@@ -6,34 +6,18 @@ import com.example.walletapp.enums.OperationType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@Testcontainers
-@AutoConfigureMockMvc
-class WalletControllerIT {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>("postgres:16")
-                    .withDatabaseName("wallet_db")
-                    .withUsername("postgres")
-                    .withPassword("1234");
+class WalletControllerIT extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -190,6 +174,23 @@ class WalletControllerIT {
     }
 
     @Test
+    void shouldReturn400WhenOperationTypeUnknown() throws Exception {
+
+        String json = """
+            {
+              "walletId": "%s",
+              "operationType": "TRANSFER",
+              "amount": 100
+            }
+            """.formatted(UUID.randomUUID());
+
+        mockMvc.perform(post("/api/v1/wallet")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void shouldReturn404WhenWalletForOperationNotFound() throws Exception {
 
         WalletRequestDTO requestDTO = new WalletRequestDTO();
@@ -217,6 +218,60 @@ class WalletControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400WhenAmountHasTooManyDecimals() throws Exception {
+
+        UUID walletId = UUID.randomUUID();
+
+        createWallet(walletId, BigDecimal.ZERO);
+
+        WalletRequestDTO requestDTO = new WalletRequestDTO();
+        requestDTO.setWalletId(walletId);
+        requestDTO.setOperationType(OperationType.DEPOSIT);
+        requestDTO.setAmount(new BigDecimal("10.123"));
+
+        mockMvc.perform(post("/api/v1/wallet")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.amount").exists());
+    }
+
+    @Test
+    void shouldReturn400WhenUnknownFieldPresent() throws Exception {
+
+        // payload операции, отправленный на эндпоинт создания кошелька,
+        // должен отклоняться, а не молча создавать кошелёк
+        String json = """
+            {
+              "walletId": "%s",
+              "operationType": "WITHDRAW",
+              "amount": 500
+            }
+            """.formatted(UUID.randomUUID());
+
+        mockMvc.perform(post("/api/v1/wallets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404ForUnknownPath() throws Exception {
+
+        mockMvc.perform(get("/api/v1/unknown"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void shouldReturn405ForUnsupportedMethod() throws Exception {
+
+        mockMvc.perform(delete("/api/v1/wallet"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405));
     }
 
     private void createWallet(UUID walletId, BigDecimal balance) throws Exception {

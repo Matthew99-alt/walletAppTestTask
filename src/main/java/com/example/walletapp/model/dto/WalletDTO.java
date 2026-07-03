@@ -1,5 +1,6 @@
 package com.example.walletapp.model.dto;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
@@ -16,5 +17,6 @@ public class WalletDTO {
 
     @NotNull
     @PositiveOrZero
+    @Digits(integer = 17, fraction = 2)
     private BigDecimal amount;
 }

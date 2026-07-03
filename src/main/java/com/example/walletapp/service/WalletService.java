@@ -9,6 +9,7 @@ import com.example.walletapp.model.entity.Wallet;
 import com.example.walletapp.repository.WalletRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,14 +26,16 @@ public class WalletService {
         Wallet walletToChange = walletRepository.findByIdForUpdate(walletRequestDTO.getWalletId())
                 .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
 
-        switch(walletRequestDTO.getOperationType()){
+        switch (walletRequestDTO.getOperationType()) {
             case DEPOSIT -> walletToChange.setAmount(walletToChange.getAmount().add(walletRequestDTO.getAmount()));
             case WITHDRAW -> {
-                if (walletToChange.getAmount().compareTo(walletRequestDTO.getAmount())<0){
-                    throw new InsufficientFundsException("Negative balance");
+                if (walletToChange.getAmount().compareTo(walletRequestDTO.getAmount()) < 0) {
+                    throw new InsufficientFundsException("Insufficient funds");
                 }
                 walletToChange.setAmount(walletToChange.getAmount().subtract(walletRequestDTO.getAmount()));
             }
+            default -> throw new IllegalStateException(
+                    "Unsupported operation type: " + walletRequestDTO.getOperationType());
         }
 
         return walletMapper.walletToDTO(walletToChange);
@@ -48,11 +51,13 @@ public class WalletService {
 
     @Transactional
     public WalletDTO createWallet(WalletDTO walletDTO){
-        if (walletRepository.existsById(walletDTO.getWalletId())) {
+        try {
+            // flush внутри метода, чтобы нарушение PK при гонке двух create
+            // поймать здесь, а не на коммите за пределами try
+            walletRepository.saveAndFlush(walletMapper.dtoToWallet(walletDTO));
+        } catch (DataIntegrityViolationException ex) {
             throw new WalletAlreadyExistsException("Wallet already exists");
         }
-
-        walletRepository.save(walletMapper.dtoToWallet(walletDTO));
 
         return walletDTO;
     }

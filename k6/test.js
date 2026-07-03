@@ -6,7 +6,7 @@ export const options = {
   duration: '30s',
 };
 
-const BASE_URL = 'http://localhost:8080/api/v1';
+const BASE_URL = (__ENV.BASE_URL || 'http://localhost:8080') + '/api/v1';
 const HEADERS = { headers: { 'Content-Type': 'application/json' } };
 
 // Все VU бьют в один кошелёк — проверяем поведение под конкурентной записью.
