@@ -1,13 +1,23 @@
-FROM eclipse-temurin:17-jdk
+# Стадия сборки: сначала только скрипты сборки — слой с зависимостями
+# кешируется и не пересобирается при изменении исходников.
+FROM eclipse-temurin:17-jdk AS build
 
 WORKDIR /app
 
-COPY . .
+COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY gradle ./gradle
+RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 
-RUN chmod +x gradlew
+COPY src ./src
+RUN ./gradlew bootJar --no-daemon -x test
 
-RUN ./gradlew build -x test
+# Рантайм: только JRE и собранный jar.
+FROM eclipse-temurin:17-jre
+
+WORKDIR /app
+
+COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "build/libs/walletApp-0.0.1-SNAPSHOT.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
